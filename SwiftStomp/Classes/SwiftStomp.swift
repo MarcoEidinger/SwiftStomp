@@ -10,6 +10,7 @@ import Foundation
 import OSLog
 import Reachability
 import Combine
+import Network
 
 let NULL_CHAR = "\u{00}"
 
@@ -80,12 +81,20 @@ public class SwiftStomp: NSObject {
 
     public var autoReconnect = false
 
-    public init (host : URL, headers : [String : String]? = nil, httpConnectionHeaders : [String : String]? = nil){
+    public init (host : URL, headers : [String : String]? = nil, httpConnectionHeaders : [String : String]? = nil, endpointForProxyConfiguration: NWEndpoint? = nil) {
         self.host = host
         self.stompConnectionHeaders = headers
         self.httpConnectionHeaders = httpConnectionHeaders
         super.init()
-        self.urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+        let config = URLSessionConfiguration.default
+        if #available(iOS 17.0, *) {
+            // https://docs.proxyman.io/advanced-features/websocket#solution-1-recommended-for-ios-17-or-later
+            if let socksv5Proxy = endpointForProxyConfiguration {
+                let proxyConfig = ProxyConfiguration.init(socksv5Proxy: socksv5Proxy)
+                config.proxyConfigurations = [proxyConfig]
+            }
+        }
+        self.urlSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         self.initReachability()
     }
 
